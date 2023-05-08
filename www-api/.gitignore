@@ -1,9 +1,4 @@
 node_modules/
 data/
-config.json
-docker-compose.*.yml
-config.*.json
-.ssh
-.credentials
 .env
 .env.*
