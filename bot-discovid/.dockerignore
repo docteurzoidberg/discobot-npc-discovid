@@ -1,0 +1,11 @@
+.env
+.env.*
+data
+node_modules
+*.log
+*.md
+.vscode
+.gitignore
+.git
+.eslintrc.json
+.prettierrc.json

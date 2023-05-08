@@ -1,0 +1,17 @@
+{
+  "name": "discovid-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "drzoid",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.2",
+    "morgan": "^1.10.0",
+    "uuid": "^8.3.2"
+  }
+}

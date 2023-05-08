@@ -1,0 +1,61 @@
+version: "3"
+networks:
+  npc-discovid:
+
+services:
+  api:
+    image: npc-discovid-api
+    hostname: npc-discovid-api
+    container_name: npc-discovid-api
+    tty: true
+    build:
+      context: ./www-api
+    environment:
+      - DATA_PATH=/data
+    networks:
+      - npc-discovid
+    ports:
+      - 5000:5000
+    volumes:
+      - ./www-api/data:/data
+    restart: unless-stopped
+
+  bot:
+    image: npc-discovid-bot
+    hostname: npc-discovid-bot
+    container_name: npc-discovid-bot
+    tty: true
+    build:
+      context: ./bot-discovid
+      dockerfile: Dockerfile
+      #args are needed for discordjs slash commands register at build time
+      args:
+        - BOT_TOKEN=
+        - DISCORD_CLIENT_ID=
+        - DISCORD_GUILD_ID=
+    env_file:
+      - ./bot-discovid/.env.production
+    networks:
+      - npc-discovid
+    volumes:
+      - ./bot-discovid/data:/data
+    depends_on:
+      - api
+      - radarr
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    hostname: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./radarr/config:/config
+    networks:
+      - npc-discovid
+    ports:
+      - 7878:7878
+    restart: unless-stopped

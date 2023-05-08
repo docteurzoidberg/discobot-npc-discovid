@@ -1,0 +1,27 @@
+{
+  "name": "npc-discovid",
+  "version": "2.0.0",
+  "description": "Discord bot to check about movies",
+  "main": "index.js",
+  "scripts": {
+    "bot": "node src/index.js --no-warning | pino-pretty",
+    "register": "node src/register.js --no-warning | pino-pretty"
+  },
+  "author": "DrZoid",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/rest": "^1.7.1",
+    "axios": "^1.3.4",
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.0.3",
+    "node-themoviedb": "^0.2.8",
+    "pino": "^8.11.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.37.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "prettier": "^2.8.7"
+  }
+}
