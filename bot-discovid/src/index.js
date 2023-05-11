@@ -5,8 +5,9 @@ require('dotenv').config({
 });
 
 const fs = require('fs');
+const { Signale } = require('signale');
 
-const logger = require('pino')({ level: process.env.LOG_LEVEL || 'info' });
+const logger = new Signale();
 
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 

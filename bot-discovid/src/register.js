@@ -4,7 +4,9 @@ require('dotenv').config({
     (process.env.NODE_ENV ? `.${process.env.NODE_ENV}` : ''),
 });
 
-const logger = require('pino')({ level: process.env.LOG_LEVEL || 'info' });
+const { Signale } = require('signale');
+
+const logger = new Signale();
 const fs = require('fs');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
