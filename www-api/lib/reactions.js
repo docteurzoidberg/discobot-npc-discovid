@@ -1,4 +1,10 @@
-require('dotenv').config();
+require('dotenv').config({
+  path:
+    __dirname +
+    '/../.env' +
+    (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
+});
+
 const fs = require('fs');
 const datapath = process.env.DATA_PATH || '/data';
 //reactions: [{user: 'userid', reaction: ':emoji: and or message'},...]
@@ -108,10 +114,13 @@ const removeEmoji = (req, res, next) => {
 
 const getReactions = (req, res, next) => {
   const movieId = req.params.movieId;
-  const reactions = JSON.parse(
-    fs.readFileSync(datapath + '/reactions/' + movieId + '.json')
-  );
-  res.status(200).json(reactions);
+  if (fs.existsSync(datapath + '/reactions/' + movieId + '.json')) {
+    const reactions = JSON.parse(
+      fs.readFileSync(datapath + '/reactions/' + movieId + '.json')
+    );
+    return res.status(200).json(reactions);
+  }
+  return res.status(200).json([]);
 };
 
 module.exports = {
