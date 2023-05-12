@@ -143,30 +143,138 @@ const thumbsDownButtonInterractionCollector = async (
   }
 };
 
+const _formatAutocompleteMovieId = (movie) => {
+  if (!movie.title || !movie.imdbId) {
+    console.log("Movie doesn't have title or imdbId:", movie);
+    return {};
+  }
+  const movieTitle =
+    movie.title.length > 18
+      ? movie.title.substring(0, 15) + '...'
+      : movie.title;
+  return {
+    name: `${movie.imdbId.replace('tt', '')}: ${movieTitle} - ${movie.year}`,
+    value: movie.imdbId,
+  };
+};
+
+const _formatAutocompleteMovieTitle = (movie) => {
+  if (!movie.title || !movie.imdbId) {
+    console.log("Movie doesn't have title or imdbId:", movie);
+    return null;
+  }
+  return {
+    name: `${movie.year} > ${movie.title}`,
+    value: movie.imdbId,
+  };
+};
+
+const autocompleteImdbId = async (client, interaction, terms) => {
+  const movies = await radarr.lookupMovieImdb(terms);
+  const moviesFiltered = removeMoviesWithoutId(movies);
+  const moviesOrdered = orderMovieResults(moviesFiltered);
+  const moviesLimited = limitResults(moviesOrdered, 5);
+  const results = [];
+  //iterate over values of object
+  for (const movie of Object.values(moviesLimited)) {
+    //console.log(movie);
+    results.push(_formatAutocompleteMovieId(movie));
+  }
+  return results;
+};
+
+const autocompleteMovieName = async (client, interaction, terms) => {
+  const movies = await radarr.lookupMovie(terms);
+  const moviesFiltered = removeMoviesWithoutId(movies);
+  const moviesOrdered = orderMovieResults(moviesFiltered);
+  const moviesLimited = limitResults(moviesOrdered, 5);
+  const results = [];
+  for (const movie of Object.values(moviesLimited)) {
+    const movieTitle = _formatAutocompleteMovieTitle(movie);
+    if (movieTitle != null) {
+      results.push(movieTitle);
+    }
+  }
+  return results;
+};
+
+const orderMovieResults = (movies) => {
+  //order results by imdb, tmdb, popularity
+  movies.sort((a, b) => {
+    if (a.ratings.imdb && b.ratings.imdb) {
+      return b.ratings.imdb.value - a.ratings.imdb.value;
+    } else if (a.ratings.tmdb && b.ratings.tmdb) {
+      return b.ratings.tmdb.value - a.ratings.tmdb.value;
+    }
+    return b.popularity - a.popularity;
+  });
+  return movies;
+};
+
+const limitResults = (results, limit) => {
+  if (results.length > limit) {
+    results = results.slice(0, limit);
+  }
+  return results;
+};
+
+const removeMoviesWithoutId = (movies) => {
+  return movies.filter((movie) => movie.imdbId && movie.tmdbId);
+};
+
+const getColorFromImdbId = (imdbId) => {
+  const imdbIdNumber = imdbId.replace('tt', '');
+  //generate random color based on imdbId
+  const color = parseInt(imdbIdNumber) % 16777215;
+  return color;
+};
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('film')
     .setDescription('Cherche un film!')
     .addStringOption((option) =>
-      option.setName('film').setDescription('Nom du film a chercher')
+      option
+        .setName('film')
+        .setDescription('Nom du film (ou id imdb) a chercher')
+        .setAutocomplete(true)
+        .setRequired(true)
     ),
 
   async execute(client, interaction) {
     //radarr lookup
-    const terms = interaction.options.getString('film');
+    const terms = interaction.options.getString('film') || '';
+
+    let imdbId = false;
+
+    //if term contains only numbers, it's an imdbId
+    if (terms.match(/^[0-9]+$/) || terms.startsWith('tt')) {
+      client.logger.info('terms is an imdbId !');
+      imdbId = terms;
+    }
+
     const movies = [];
     try {
-      const results = await radarr.lookupMovie(terms);
-      if (!results || results.length == 0) {
-        client.logger.warn(`Aucun film trouvé pour ${terms}`);
-        return interaction.reply({
-          content: `Aucun film trouvé pour ${terms}`,
-          ephemeral: true,
-        });
-      }
-      for (const result of results) {
-        //const movie = await tmdb.getMovie(result.tmdbId);
+      if (imdbId) {
+        const result = await radarr.lookupMovieImdb(imdbId);
+        if (!result) {
+          client.logger.warn(`Aucun resultat par imdb pour ${imdbId}`);
+          return interaction.reply({
+            content: `Aucun resultat IMDB trouvé pour l'id ${imdbId}`,
+            ephemeral: true,
+          });
+        }
         movies.push(result);
+      } else if (terms) {
+        const results = await radarr.lookupMovie(terms);
+        if (!results || results.length == 0) {
+          client.logger.warn(`Aucun resultat radarr pour ${terms}`);
+          return interaction.reply({
+            content: `Aucun film trouvé pour ${terms}`,
+            ephemeral: true,
+          });
+        }
+        //console.log(results);
       }
     } catch (err) {
       client.logger.error(`Erreur lors de la recherche de ${terms}`);
@@ -177,7 +285,20 @@ module.exports = {
       });
     }
 
-    const result = movies[0];
+    //order results by imdb, tmdb, popularity
+    const moviesFiltered = removeMoviesWithoutId(movies);
+    const moviesOrdered = orderMovieResults(moviesFiltered);
+
+    //fin si aucun film trouvé
+    if (moviesOrdered.length == 0) {
+      client.logger.warn(`Aucun resultat pour ${terms}`);
+      return interaction.reply({
+        content: `Aucun film trouvé pour ${terms}`,
+        ephemeral: true,
+      });
+    }
+
+    const result = moviesOrdered[0];
     client.logger.debug(result);
 
     //'👍', '👎' buttons
@@ -257,12 +378,31 @@ module.exports = {
       client.logger.error(error);
     }
 
+    let image = '';
+    if (result.images && result.images.length > 0) {
+      //look for coverType 'poster'
+      const poster = result.images.find((image) => {
+        return image.coverType === 'poster';
+      });
+      if (poster) {
+        image = poster.url;
+      } else {
+        image = result.images[0].url;
+      }
+    } else if (result.remotePoster) {
+      image = result.remotePoster;
+    }
+
+    //color generated by random from imdbid from a 256 color palette
+    const color = getColorFromImdbId(result.imdbId);
+
     const movieEmbed = new EmbedBuilder()
-      .setColor(0x0099ff)
+      .setColor(color)
       .setTitle(result.title)
       .setURL(`http://imdb.com/title/${result.imdbId}`)
       .setDescription(result.overview)
-      .setThumbnail(result.remotePoster)
+      .setThumbnail(image)
+      //.setImage(image)
       .addFields(fields);
 
     //Actual response to command
@@ -306,5 +446,55 @@ module.exports = {
       client.logger.error('Error getting reactions from api');
       client.logger.error(error);
     }
+  },
+
+  async autocomplete(client, interaction) {
+    //focused option
+    const option = interaction.options.getFocused(true);
+    if (!option) {
+      interaction.respond([]);
+    }
+    const optionName = option.name;
+    const focusedValue = option.value || '';
+    let choices = [];
+    switch (optionName) {
+      case 'film':
+        if (focusedValue.length < 3) break;
+        choices = await autocompleteMovieName(
+          client,
+          interaction,
+          focusedValue
+        );
+        console.log(choices);
+        break;
+      case 'imdb':
+        if (focusedValue.length < 5) break;
+        choices = await autocompleteImdbId(client, interaction, focusedValue);
+        console.log(choices);
+        break;
+      default:
+        break;
+    }
+
+    let filterValue = focusedValue.toLowerCase();
+
+    //reduce focusedValue to 24 chars
+    //if (filterValue.length > 24) {
+    //  filterValue = filterValue.substring(0, 21); //24 - 3 dots
+    //  filterValue += '...';
+    //}
+    const filtered = choices.filter(
+      (choice) =>
+        //insensitive search
+        choice.name &&
+        choice.value &&
+        choice.name.toLowerCase().indexOf(filterValue) > -1
+    );
+
+    //limit to 25 results
+    filtered.length = Math.min(filtered.length, 25);
+
+    console.log(filtered);
+    await interaction.respond(filtered);
   },
 };

@@ -62,6 +62,50 @@ async function lookupMovie(name) {
     });
 }
 
+//radarr movie lookup imdb http api
+async function lookupMovieImdb(imdbid) {
+  return axios
+    .get(`${RADARR_URL}/api/v3/movie/lookup/imdb`, {
+      params: {
+        imdbId: imdbid,
+      },
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'x-api-key': RADARR_API_KEY,
+      },
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+      console.error('RADARR lookupMovieImdb HTTP REQUEST error: ');
+      console.error(error);
+    });
+}
+
+//radarr movie get http api
+async function getMovieById(tmdbId) {
+  return axios
+    .get(`${RADARR_URL}/api/v3/movie`, {
+      params: {
+        tmdbId,
+      },
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'x-api-key': RADARR_API_KEY,
+      },
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+      console.error('RADARR getMovie HTTP REQUEST error: ');
+      console.error(error);
+    });
+}
+
 //get movie file
 async function getMovieFile(id) {
   return axios
@@ -116,6 +160,8 @@ async function getProfiles() {
 module.exports = {
   addMovie,
   lookupMovie,
+  lookupMovieImdb,
+  getMovieById,
   getMovieFile,
   getProfiles,
 };
