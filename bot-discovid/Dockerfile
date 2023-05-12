@@ -32,7 +32,7 @@ ENV BOT_TOKEN $BOT_TOKEN
 ENV BOT_VERSION $BOT_VERSION
 
 # REGISTER bot commands
-RUN npm run register
+RUN npm run deletecommands && npm run register
 
 FROM register as bot
 
