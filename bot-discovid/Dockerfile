@@ -1,41 +1,45 @@
-FROM node:18-alpine3.16 as runner
+FROM node:18-alpine3.16 AS builder
 
 ENV LANG C.UTF-8
 ENV EDITOR nano
-ENV DATA_PATH /data
 
+WORKDIR /app
+
+#cache dependencies
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+RUN npm run build \
+&& rm -rf node_modules \
+&& npm ci --omit=dev
+
+FROM builder AS register
+
+ARG BOT_TOKEN
+ARG DISCORD_CLIENT_ID
+ARG DISCORD_GUILD_ID
+
+ENV LANG C.UTF-8
+ENV EDITOR nano
+ENV DISCORD_CLIENT_ID=$DISCORD_CLIENT_ID
+ENV DISCORD_GUILD_ID=$DISCORD_GUILD_ID
+ENV BOT_TOKEN=$BOT_TOKEN
+
+WORKDIR /app
+
+RUN npm run register
+
+FROM builder AS runner
+
+ENV LANG C.UTF-8
+ENV EDITOR nano
 RUN apk add dumb-init
 RUN mkdir /data
 
 # APP dir
 WORKDIR /app
 
-# NODE_MODULES
-COPY package*.json ./
-RUN npm ci --omit-dev
-
-# APP
-COPY . .
-
-# REQUIS: les variables d'environnement DISCORD_GUILD_ID, DISCORD_CLIENT_ID et BOT_TOKEN au build fournis en ARGS!
-
-FROM runner as register
-
-ARG DISCORD_GUILD_ID
-ARG DISCORD_CLIENT_ID
-ARG BOT_TOKEN
-ARG BOT_VERSION
-
-ENV DISCORD_GUILD_ID $DISCORD_GUILD_ID
-ENV DISCORD_CLIENT_ID $DISCORD_CLIENT_ID
-ENV BOT_TOKEN $BOT_TOKEN
-ENV BOT_VERSION $BOT_VERSION
-
-# REGISTER bot commands
-RUN npm run register
-
-FROM register as bot
-
 # RUN
-CMD ["dumb-init", "npm", "run", "start"]
-
+CMD ["dumb-init", "npm", "start"]

@@ -1,0 +1,14 @@
+{
+  "env": {
+    "node": 18.16
+  },
+  "jsc": {
+    "parser": {
+      "syntax": "typescript"
+    }
+  },
+  "module": {
+    "type": "commonjs"
+  },
+  "sourceMaps": "inline"
+}

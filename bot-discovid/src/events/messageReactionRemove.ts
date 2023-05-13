@@ -1,4 +1,4 @@
-const api = require('../lib/api');
+import * as api from '../lib/api';
 
 module.exports = {
   name: 'messageReactionRemove',

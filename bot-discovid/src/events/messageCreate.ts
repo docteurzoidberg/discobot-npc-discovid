@@ -1,4 +1,6 @@
-const api = require('../lib/api');
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as api from '../lib/api';
+
 module.exports = {
   name: 'messageCreate',
   async execute(client, message) {
@@ -27,7 +29,7 @@ module.exports = {
     }
     const imdbId = match[1];
     client.logger.debug(`message reference movie id : ${imdbId}`);
-    const newReactions = [];
+    const newReactions: Array<any> = [];
     newReactions.push({ user: message.author, reaction: message.content });
     try {
       await api.addReactions({ movieId: imdbId, reactions: newReactions });

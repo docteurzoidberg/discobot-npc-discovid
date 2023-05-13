@@ -5,8 +5,7 @@ module.exports = {
     //command
     if (interaction.isCommand()) {
       client.logger.info(
-        `<${
-          interaction.user.tag
+        `<${interaction.user.tag
         }> used command ${interaction.commandName.toUpperCase()} in #${interaction.channel.name.toUpperCase()}`
       );
 
@@ -32,8 +31,7 @@ module.exports = {
         .getFocused(true)
         ?.name.toUpperCase();
       client.logger.info(
-        `<${
-          interaction.user.tag
+        `<${interaction.user.tag
         }> triggered AUTOCOMPLETE for field ${focusedFieldName} in command ${interaction.commandName.toUpperCase()} in #${interaction.channel.name.toUpperCase()}`
       );
 
@@ -49,12 +47,14 @@ module.exports = {
     } else if (interaction.isButton()) {
       const customId = interaction.customId;
       client.logger.info(
-        `<${
-          interaction.user.tag
+        `<${interaction.user.tag
         }> clicked button ${customId.toUpperCase()} in #${interaction.channel.name.toUpperCase()}`
       );
 
-      await interaction.deferUpdate({ ephemeral: false }).catch(() => {});
+
+      await interaction.deferUpdate({ ephemeral: false });
+
+
       const button = client.buttons.get(customId);
       if (!button) {
         client.logger.warn(`Button ${customId} not found`);
@@ -73,8 +73,7 @@ module.exports = {
       const interactionName = interaction.commandName;
       const interactiontype = interaction.type;
       client.logger.warn(
-        `<${
-          interaction.user.tag
+        `<${interaction.user.tag
         }> in #${interaction.channel.name.toUpperCase()} triggered an unhandled interaction, type: ${interactiontype}, name: ${interactionName}  `
       );
     }

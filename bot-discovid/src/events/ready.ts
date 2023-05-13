@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 module.exports = {
   name: 'ready',
   once: true,
   execute(client) {
     const guilds = client.guilds.cache;
-    const serverArray = [];
+    const serverArray: Array<any> = [];
 
     //populate server names and guild ids
     guilds.forEach(async (guild) => {
@@ -24,8 +25,7 @@ module.exports = {
 
     client.logger.info(`NPC-Quests v${client.version} ready !`);
     client.logger.info(
-      `Logged in as ${client.user.tag} on ${
-        guilds.size
+      `Logged in as ${client.user.tag} on ${guilds.size
       } servers: ${serverList.join(', ')}`
     );
     if (client.config.INVISIBLE) {

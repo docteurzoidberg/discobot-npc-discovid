@@ -1,11 +1,12 @@
-require('dotenv').config({
+import * as dotenv from 'dotenv';
+import axios from 'axios';
+
+dotenv.config({
   path:
     __dirname +
     '/../../.env' +
     (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
 });
-
-const axios = require('axios');
 
 const RADARR_URL = process.env.RADARR_URL || 'http://localhost:7878';
 const RADARR_API_KEY = process.env.RADARR_API_KEY || '';
@@ -33,9 +34,9 @@ async function addMovie(ctx) {
     .catch(function (error) {
       console.error(
         'RADARR addMovie HTTP REQUEST error: ' +
-          error.response.status +
-          ' ' +
-          error.response.statusText
+        error.response.status +
+        ' ' +
+        error.response.statusText
       );
     });
 }
@@ -126,9 +127,9 @@ async function getMovieFile(id) {
       if (error.response.status === 404) return false;
       console.error(
         'RADARR getMovieFile HTTP REQUEST error: ' +
-          error.response.status +
-          ' ' +
-          error.response.statusText
+        error.response.status +
+        ' ' +
+        error.response.statusText
       );
     });
 }
@@ -150,9 +151,9 @@ async function getProfiles() {
       if (error.response.status === 404) return false;
       console.error(
         'RADARR getMovieFile HTTP REQUEST error: ' +
-          error.response.status +
-          ' ' +
-          error.response.statusText
+        error.response.status +
+        ' ' +
+        error.response.statusText
       );
     });
 }

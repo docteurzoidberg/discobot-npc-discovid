@@ -1,15 +1,16 @@
-require('dotenv').config({
+import * as dotenv from 'dotenv';
+import axios from 'axios';
+
+dotenv.config({
   path:
     __dirname +
     '/../../.env' +
     (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
 });
 
-const axios = require('axios');
-
 const API_URL = process.env.API_URL || 'http://localhost:5000';
 
-async function addLink(ctx) {
+export async function addLink(ctx) {
   return axios
     .post(`${API_URL}/links/add`, ctx, {
       headers: {
@@ -25,7 +26,7 @@ async function addLink(ctx) {
     });
 }
 
-async function addReactions(ctx) {
+export async function addReactions(ctx) {
   return axios
     .post(`${API_URL}/reactions/add`, ctx, {
       headers: {
@@ -41,7 +42,7 @@ async function addReactions(ctx) {
     });
 }
 
-async function removeEmoji(ctx) {
+export async function removeEmoji(ctx) {
   return axios
     .post(`${API_URL}/reactions/removeEmoji`, ctx, {
       headers: {
@@ -57,7 +58,7 @@ async function removeEmoji(ctx) {
     });
 }
 
-async function getReactions(ctx) {
+export async function getReactions(ctx) {
   return axios
     .get(`${API_URL}/reactions/get/${ctx.movieId}`, {
       headers: {
@@ -72,10 +73,3 @@ async function getReactions(ctx) {
       console.log(error);
     });
 }
-
-module.exports = {
-  addLink,
-  addReactions,
-  getReactions,
-  removeEmoji,
-};

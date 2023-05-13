@@ -1,7 +1,9 @@
-const api = require('../lib/api');
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as api from '../lib/api';
 
 module.exports = {
   name: 'messageReactionAdd',
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async execute(client, reaction, user) {
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
@@ -38,7 +40,7 @@ module.exports = {
     const imdbid = match[1];
     client.logger.debug('IMDBID: ' + imdbid);
     try {
-      const newReactions = [];
+      const newReactions: Array<any> = [];
       const users = await reaction.users.fetch();
       users.map((u) => {
         newReactions.push({ user: u, emoji: reaction.emoji.name });

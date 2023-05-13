@@ -1,31 +1,60 @@
-require('dotenv').config({
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import * as dotenv from 'dotenv';
+import {
+  SlashCommandBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  EmbedBuilder,
+} from '@discordjs/builders';
+
+import { ButtonStyle } from 'discord.js';
+import MovieDB from 'node-themoviedb';
+import * as libcrypto from 'crypto';
+
+import * as api from '../lib/api';
+import * as openai from '../lib/openai-gpt';
+import * as radarr from '../lib/radarr';
+
+dotenv.config({
   path:
     `${__dirname}/../../.env` +
     (process.env.NODE_ENV ? `.${process.env.NODE_ENV}` : ''),
 });
 
-const {
-  SlashCommandBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  EmbedBuilder,
-} = require('@discordjs/builders');
-
-const { ButtonStyle } = require('discord.js');
-const MovieDB = require('node-themoviedb');
-const crypto = require('crypto');
-
-const api = require('../lib/api');
-const openai = require('../lib/openai-gpt');
-const radarr = require('../lib/radarr');
-
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 
 const tmdb = new MovieDB(TMDB_API_KEY, { language: 'fr-FR' });
 
+const _formatAutocompleteMovieId = (movie) => {
+  if (!movie.title || !movie.imdbId) {
+    console.log("Movie doesn't have title or imdbId:", movie);
+    return {};
+  }
+  const movieTitle =
+    movie.title.length > 18
+      ? movie.title.substring(0, 15) + '...'
+      : movie.title;
+  return {
+    name: `${movie.imdbId.replace('tt', '')}: ${movieTitle} - ${movie.year}`,
+    value: movie.imdbId,
+  };
+};
+
+const _formatAutocompleteMovieTitle = (movie) => {
+  if (!movie.title || !movie.imdbId) {
+    console.log("Movie doesn't have title or imdbId:", movie);
+    return null;
+  }
+  return {
+    name: `${movie.year} > ${movie.title}`,
+    value: movie.imdbId,
+  };
+};
+
 //'👍', '👎' buttons
 const makeUniqueThumbsUpButton = (client, movieResult, interaction) => {
-  const randomId = crypto.randomBytes(20).toString('hex');
+  const randomId = libcrypto.randomBytes(20).toString('hex');
   const buttonId = `thumbsup-' + ${movieResult.imdbId} + '-' + ${randomId}`;
   const uniqueThumbsUpButtonFilter = (filterInteraction) =>
     filterInteraction.isButton() && filterInteraction.customId == buttonId;
@@ -83,7 +112,7 @@ const thumbsUpButtonInterractionCollector = async (
 };
 
 const makeUniqueThumbsDownButton = (client, movieResult, interaction) => {
-  const randomId = crypto.randomBytes(20).toString('hex');
+  const randomId = libcrypto.randomBytes(20).toString('hex');
   const buttonId = `thumbsdown-' + ${movieResult.imdbId} + '-' + ${randomId}`;
   const uniqueThumbsDownButtonFilter = (filterInteraction) =>
     filterInteraction.isButton() && filterInteraction.customId == buttonId;
@@ -144,38 +173,12 @@ const thumbsDownButtonInterractionCollector = async (
   }
 };
 
-const _formatAutocompleteMovieId = (movie) => {
-  if (!movie.title || !movie.imdbId) {
-    console.log("Movie doesn't have title or imdbId:", movie);
-    return {};
-  }
-  const movieTitle =
-    movie.title.length > 18
-      ? movie.title.substring(0, 15) + '...'
-      : movie.title;
-  return {
-    name: `${movie.imdbId.replace('tt', '')}: ${movieTitle} - ${movie.year}`,
-    value: movie.imdbId,
-  };
-};
-
-const _formatAutocompleteMovieTitle = (movie) => {
-  if (!movie.title || !movie.imdbId) {
-    console.log("Movie doesn't have title or imdbId:", movie);
-    return null;
-  }
-  return {
-    name: `${movie.year} > ${movie.title}`,
-    value: movie.imdbId,
-  };
-};
-
 const autocompleteImdbId = async (client, interaction, terms) => {
   const movies = await radarr.lookupMovieImdb(terms);
   const moviesFiltered = removeMoviesWithoutId(movies);
   const moviesOrdered = orderMovieResults(moviesFiltered);
   const moviesLimited = limitResults(moviesOrdered, 5);
-  const results = [];
+  const results: Array<any> = [];
   //iterate over values of object
   for (const movie of Object.values(moviesLimited)) {
     //console.log(movie);
@@ -189,7 +192,7 @@ const autocompleteMovieName = async (client, interaction, terms) => {
   const moviesFiltered = removeMoviesWithoutId(movies);
   const moviesOrdered = orderMovieResults(moviesFiltered);
   const moviesLimited = limitResults(moviesOrdered, 5);
-  const results = [];
+  const results: Array<any> = [];
   for (const movie of Object.values(moviesLimited)) {
     const movieTitle = _formatAutocompleteMovieTitle(movie);
     if (movieTitle != null) {
@@ -230,6 +233,104 @@ const getColorFromImdbId = (imdbId) => {
   return color;
 };
 
+const convertMovieTitleToEmojis = async (movieTitle) => {
+  const prompt = `Convert movie title into emojis (some may be french titles).
+  Back to the Future => 👨👴🚗🕒 
+  Batman => 🤵🦇 
+  Transformers => 🚗🤖 
+  Star Wars => 🌟🚀🙌
+  
+  Now here is the movie title: ${movieTitle} 
+  (please respond only with emojis)
+`;
+  const history = [];
+  const response = await openai.callChatCompletion(prompt, history);
+  return response;
+};
+
+//more fields: tmdb more info
+const getCreditsFields = (tmdbCredits) => {
+  const fields: Array<any> = [];
+
+  const director = tmdbCredits.data.crew.find((crew) => {
+    return crew.job === 'Director';
+  });
+
+  const actors = tmdbCredits.data.cast.map((cast) => {
+    return cast.name;
+  });
+
+  //limit to 3 actors
+  const actorsLimited = actors.slice(0, 3);
+
+  if (director?.name !== '') {
+    fields.push({
+      name: 'Réalisateur',
+      value: director.name,
+      inline: true,
+    });
+  }
+  if (actorsLimited.length > 0) {
+    fields.push({
+      name: 'Acteurs',
+      value: actorsLimited.join(', '),
+      inline: true,
+    });
+  }
+  return fields;
+};
+
+const getStartFields = (movie) => {
+  const fields: Array<any> = [];
+  if (movie.genres && movie.genres.length > 0) {
+    fields.push({
+      name: 'Genre',
+      value: movie.genres.join(', '),
+      inline: true,
+    });
+  }
+  if (movie.year && movie.year.toString() !== '') {
+    fields.push({
+      name: 'Année',
+      value: movie.year.toString(),
+      inline: true,
+    });
+  }
+  if (movie.studio && movie.studio !== '') {
+    fields.push({ name: 'Studio', value: movie.studio, inline: true });
+  }
+  return fields;
+};
+
+//fetch credits from tmdb api
+const fetchTmdbCredits = async (movie) => {
+  const args = {
+    pathParameters: {
+      movie_id: movie.tmdbId,
+    },
+  };
+  const credits = await tmdb.movie.getCredits(args);
+  return credits;
+};
+
+const getMovieImage = (movie) => {
+  let imageUrl = '';
+  if (movie.images && movie.images.length > 0) {
+    //look for coverType 'poster'
+    const poster = movie.images.find((image) => {
+      return image.coverType === 'poster';
+    });
+    if (poster) {
+      imageUrl = poster.url;
+    } else {
+      imageUrl = movie.images[0].url;
+    }
+  } else if (movie.remotePoster) {
+    imageUrl = movie.remotePoster;
+  }
+  return imageUrl;
+};
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('film')
@@ -254,7 +355,7 @@ module.exports = {
       imdbId = terms;
     }
 
-    const movies = [];
+    const movies: Array<any> = [];
     try {
       if (imdbId) {
         const result = await radarr.lookupMovieImdb(imdbId);
@@ -321,78 +422,26 @@ module.exports = {
     );
 
     // Message Fields
-    var fields = [];
+    const fields: Array<any> = [];
 
-    if (result.genres && result.genres.length > 0) {
-      fields.push({
-        name: 'Genre',
-        value: result.genres.join(', '),
-        inline: true,
-      });
-    }
-    if (result.year && result.year.toString() !== '') {
-      fields.push({
-        name: 'Année',
-        value: result.year.toString(),
-        inline: true,
-      });
-    }
-    if (result.studio && result.studio !== '') {
-      fields.push({ name: 'Studio', value: result.studio, inline: true });
-    }
+    //radarr fields
+    const startFields = getStartFields(result);
+    fields.push(...startFields);
 
-    //more fields: tmdb more info
+    //fetch tmdb fore more info
     try {
-      const args = {
-        pathParameters: {
-          movie_id: result.tmdbId,
-        },
-      };
-      const movieTmdb = await tmdb.movie.getCredits(args);
-
-      const director = movieTmdb.data.crew.find((crew) => {
-        return crew.job === 'Director';
-      });
-
-      const actors = movieTmdb.data.cast.map((cast) => {
-        return cast.name;
-      });
-
-      //limit to 3 actors
-      const actorsLimited = actors.slice(0, 3);
-
-      if (director?.name !== '') {
-        fields.push({
-          name: 'Réalisateur',
-          value: director.name,
-          inline: true,
-        });
-      }
-      if (actorsLimited.length > 0) {
-        fields.push({
-          name: 'Acteurs',
-          value: actorsLimited.join(', '),
-          inline: true,
-        });
-      }
-    } catch (error) {
-      client.logger.error(error);
+      const tmdbCredits = await fetchTmdbCredits(result);
+      const tmdbFields = getCreditsFields(tmdbCredits);
+      fields.push(...tmdbFields);
+    } catch (err) {
+      client.logger.error(
+        `Erreur lors de la recuperation des infos tmdb pour ${result.tmdbId}`
+      );
+      client.logger.error(err);
+      client.logger.error(err.stack);
     }
 
-    let image = '';
-    if (result.images && result.images.length > 0) {
-      //look for coverType 'poster'
-      const poster = result.images.find((image) => {
-        return image.coverType === 'poster';
-      });
-      if (poster) {
-        image = poster.url;
-      } else {
-        image = result.images[0].url;
-      }
-    } else if (result.remotePoster) {
-      image = result.remotePoster;
-    }
+    const image = getMovieImage(result);
 
     //color generated by random from imdbid from a 256 color palette
     const color = getColorFromImdbId(result.imdbId);
@@ -421,7 +470,7 @@ module.exports = {
         movieId: result.imdbId.replace('tt', ''),
       });
       if (reactions && reactions.length > 0) {
-        const reactionsContent = [];
+        const reactionsContent: Array<any> = [];
         reactions.forEach((reaction) => {
           if (reaction.emoji && reaction.reaction) {
             reactionsContent.push(
@@ -444,18 +493,24 @@ module.exports = {
         });
       } else if (client.config.USE_OPENAI) {
         //pas de reactions. invoker gpt?
-        const emojiTitle = await openai.convertMovieTitleToEmojis(result.title);
-        if (!emojiTitle) {
+
+        const reactions: Array<any> = [];
+        let emojiTitle = '';
+
+        try {
+          emojiTitle = await convertMovieTitleToEmojis(result.title);
+          //ajouter chaque emoji en reaction via api
+          const emojiTitleArray = emojiTitle.split('');
+          for (const emoji of emojiTitleArray) {
+            const reaction = { user: client.user, emoji: emoji };
+            reactions.push(reaction);
+          }
+        } catch (error) {
+          client.logger.error('Error convert movie to emojis');
+          client.logger.error(error);
           return;
         }
 
-        //ajouter chaque emoji en reaction via api
-        const emojiTitleArray = emojiTitle.split('');
-        const reactions = [];
-        for (const emoji of emojiTitleArray) {
-          const reaction = { user: client.user, emoji: emoji };
-          reactions.push(reaction);
-        }
         try {
           const imdbId = result.imdbId.replace('tt', '');
           await api.addReactions({
@@ -467,10 +522,9 @@ module.exports = {
           client.logger.error(error);
           return;
         }
-        const reactionsContent = [];
-        reactionsContent.push(`${emojiTitle} -${client.user.username}`);
+
         msg.channel.send({
-          content: `**Avis**:\n${reactionsContent.join('\n')}`,
+          content: `**Avis**:\n${emojiTitle} -${client.user.username}`,
           ephemeral: false,
           fetchReply: false,
         });
@@ -489,7 +543,7 @@ module.exports = {
     }
     const optionName = option.name;
     const focusedValue = option.value || '';
-    let choices = [];
+    let choices: Array<any> = [];
     switch (optionName) {
       case 'film':
         if (focusedValue.length < 3) break;
@@ -509,13 +563,7 @@ module.exports = {
         break;
     }
 
-    let filterValue = focusedValue.toLowerCase();
-
-    //reduce focusedValue to 24 chars
-    //if (filterValue.length > 24) {
-    //  filterValue = filterValue.substring(0, 21); //24 - 3 dots
-    //  filterValue += '...';
-    //}
+    const filterValue = focusedValue.toLowerCase();
     const filtered = choices.filter(
       (choice) =>
         //insensitive search
