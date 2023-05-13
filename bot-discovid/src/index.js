@@ -95,6 +95,7 @@ client.updated = updated;
 client.version = BOT_VERSION;
 client.dataPath = DATA_PATH;
 client.config = {
+  USE_OPENAI: process.env.USE_OPENAI === 'true',
   INVISIBLE: BOT_INVISIBLE === 'true',
   ANNOUNCE_CHANNEL: process.env.ANNOUNCE_CHANNEL || false,
   ANNOUNCE_UPDATES: process.env.ANNOUNCE_UPDATES === 'true',

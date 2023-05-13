@@ -1,7 +1,7 @@
+!docker-compose.sample.yml
+!.env.sample
 node_modules/
 data/
-docker-compose.*.yml
-.ssh
-.credentials
+docker-compose*.yml
 .env
 .env.*

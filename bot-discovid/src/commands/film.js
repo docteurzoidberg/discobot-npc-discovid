@@ -16,6 +16,7 @@ const MovieDB = require('node-themoviedb');
 const crypto = require('crypto');
 
 const api = require('../lib/api');
+const openai = require('../lib/openai-gpt');
 const radarr = require('../lib/radarr');
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
@@ -407,7 +408,7 @@ module.exports = {
 
     //Actual response to command
     const msg = await interaction.reply({
-      content: `Film: ${result.title}`,
+      content: `**Film**:`,
       embeds: [movieEmbed],
       components: [row],
       ephemeral: false,
@@ -438,6 +439,38 @@ module.exports = {
         });
         msg.channel.send({
           content: reactionsContent.join('\n'),
+          ephemeral: false,
+          fetchReply: false,
+        });
+      } else if (client.config.USE_OPENAI) {
+        //pas de reactions. invoker gpt?
+        const emojiTitle = await openai.convertMovieTitleToEmojis(result.title);
+        if (!emojiTitle) {
+          return;
+        }
+
+        //ajouter chaque emoji en reaction via api
+        const emojiTitleArray = emojiTitle.split('');
+        const reactions = [];
+        for (const emoji of emojiTitleArray) {
+          const reaction = { user: client.user, emoji: emoji };
+          reactions.push(reaction);
+        }
+        try {
+          const imdbId = result.imdbId.replace('tt', '');
+          await api.addReactions({
+            movieId: imdbId,
+            reactions: reactions,
+          });
+        } catch (error) {
+          client.logger.error('Error adding openai reactions to api');
+          client.logger.error(error);
+          return;
+        }
+        const reactionsContent = [];
+        reactionsContent.push(`${emojiTitle} -${client.user.username}`);
+        msg.channel.send({
+          content: `**Avis**:\n${reactionsContent.join('\n')}`,
           ephemeral: false,
           fetchReply: false,
         });
