@@ -13,24 +13,20 @@ const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY || '',
 });
 
-const callCompletion = async (
+export const callCompletion = async (
   prompt,
-  model = 'davinci-003',
-  temperature = 0.9,
-  stop = ['\n']
+  model = 'text-davinci-003',
 ) => {
   const openai = new OpenAIApi(configuration);
   const completion = await openai.createCompletion({
     model: model,
-    prompt: prompt,
-    temperature: temperature,
-    stop: stop,
+    prompt: prompt
   });
   const completion_text = completion.data.choices[0].text;
   return completion_text;
 };
 
-const callChatCompletion = async (
+export const callChatCompletion = async (
   prompt,
   history: Array<any> = [],
   model = 'gpt-3.5-turbo'
@@ -55,7 +51,48 @@ const callChatCompletion = async (
   }
 };
 
-module.exports = {
-  callCompletion,
-  callChatCompletion,
+export const convertMovieTitleToEmojis = async (movieTitle) => {
+  const prompt = `
+  Convert movie titles into emojis (some may be french titles).
+  use maximum of 5 most relevant emojis.
+
+  Back to the Future => 👨👴🚗🕒 
+  Batman => 🤵🦇 
+  Transformers => 🚗🤖 
+  Star Wars => 🌟🚀🙌
+  ${movieTitle} => `;
+  //const response = await callChatCompletion(prompt, history);
+  const response = await callCompletion(prompt);
+  return response || '';
 };
+
+export const convertMovieToEmojis = async (title = '', story = '') => {
+
+  const prompt = `Convert movies into emojis.
+  
+  - Here are some examples of famous movies  when converted to emojis.
+  - Please respond with a maximum of 5 most relevant emojis.
+  - Use provided resume if you don't know about the movie.
+
+  Exemples:
+
+    Back to the Future => 👨👴🚗🕒 
+    Batman => 🤵🦇 
+    Transformers => 🚗🤖 
+    Star Wars => 🌟🚀🙌
+  
+  Movie title in french: ${title} 
+
+  Movie resume in french: 
+  
+    ${story}
+
+  Result:
+    ${title} => `;
+  //const response = await callChatCompletion(prompt, history);
+  const response = await callCompletion(prompt);
+  response?.replace(/(\r\n|\n|\r)/gm, '').trim();
+  return response || '';
+};
+
+

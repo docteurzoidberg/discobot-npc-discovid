@@ -13,7 +13,7 @@ const RADARR_API_KEY = process.env.RADARR_API_KEY || '';
 const RADARR_MOVIE_PATH = process.env.RADARR_MOVIE_PATH || '/data/media/movies';
 
 //radarr movie add http api
-async function addMovie(ctx) {
+export async function addMovie(ctx) {
   ctx.id = 0;
   ctx.addOptions = { searchForMovie: true };
   ctx.rootFolderPath = RADARR_MOVIE_PATH;
@@ -42,7 +42,7 @@ async function addMovie(ctx) {
 }
 
 //radarr movie lookup http api
-async function lookupMovie(name) {
+export async function lookupMovie(name) {
   return axios
     .get(`${RADARR_URL}/api/v3/movie/lookup`, {
       params: {
@@ -64,7 +64,7 @@ async function lookupMovie(name) {
 }
 
 //radarr movie lookup imdb http api
-async function lookupMovieImdb(imdbid) {
+export async function lookupMovieImdb(imdbid) {
   return axios
     .get(`${RADARR_URL}/api/v3/movie/lookup/imdb`, {
       params: {
@@ -86,7 +86,7 @@ async function lookupMovieImdb(imdbid) {
 }
 
 //radarr movie get http api
-async function getMovieById(tmdbId) {
+export async function getMovieById(tmdbId) {
   return axios
     .get(`${RADARR_URL}/api/v3/movie`, {
       params: {
@@ -108,7 +108,7 @@ async function getMovieById(tmdbId) {
 }
 
 //get movie file
-async function getMovieFile(id) {
+export async function getMovieFile(id) {
   return axios
     .get(`${RADARR_URL}/api/v3/movieFile`, {
       params: {
@@ -134,7 +134,7 @@ async function getMovieFile(id) {
     });
 }
 
-async function getProfiles() {
+export async function getProfiles() {
   return axios
     .get(`${RADARR_URL}/api/v3/qualityProfile`, {
       params: {},
@@ -157,12 +157,3 @@ async function getProfiles() {
       );
     });
 }
-
-module.exports = {
-  addMovie,
-  lookupMovie,
-  lookupMovieImdb,
-  getMovieById,
-  getMovieFile,
-  getProfiles,
-};

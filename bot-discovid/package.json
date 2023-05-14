@@ -7,7 +7,9 @@
     "build": "npm run clean && swc ./src -d ./dist",
     "start": "node ./dist/index.js",
     "register": "node ./dist/register.js",
-    "deletecommands": "node ./dist/deletecommands.js"
+    "deletecommands": "node ./dist/deletecommands.js",
+    "testemojimovietitle": "node ./dist/testemojimovietitle.js",
+    "testemojimovie": "node ./dist/testemojimovie.js"
   },
   "author": "DrZoid",
   "license": "MIT",

@@ -233,21 +233,6 @@ const getColorFromImdbId = (imdbId) => {
   return color;
 };
 
-const convertMovieTitleToEmojis = async (movieTitle) => {
-  const prompt = `Convert movie title into emojis (some may be french titles).
-  Back to the Future => 👨👴🚗🕒 
-  Batman => 🤵🦇 
-  Transformers => 🚗🤖 
-  Star Wars => 🌟🚀🙌
-  
-  Now here is the movie title: ${movieTitle} 
-  (please respond only with emojis)
-`;
-  const history = [];
-  const response = await openai.callChatCompletion(prompt, history);
-  return response;
-};
-
 //more fields: tmdb more info
 const getCreditsFields = (tmdbCredits) => {
   const fields: Array<any> = [];
@@ -496,9 +481,8 @@ module.exports = {
 
         const reactions: Array<any> = [];
         let emojiTitle = '';
-
         try {
-          emojiTitle = await convertMovieTitleToEmojis(result.title);
+          emojiTitle = await openai.convertMovieToEmojis(result.title, result.overview);
           //ajouter chaque emoji en reaction via api
           const emojiTitleArray = emojiTitle.split('');
           for (const emoji of emojiTitleArray) {

@@ -1,13 +1,13 @@
-require('dotenv').config({
+import * as dotenv from 'dotenv';
+import * as openai from './lib/openai-gpt';
+import * as readline from 'readline';
+
+dotenv.config({
   path:
     __dirname +
     '/../.env' +
     (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
 });
-
-const openai = require('./lib/openai-gpt');
-
-const readline = require('readline');
 
 (async () => {
   try {
